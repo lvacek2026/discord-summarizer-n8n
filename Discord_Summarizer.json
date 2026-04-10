@@ -7,64 +7,52 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "30 8,20 * * *"
+              "expression": "0 7,18 * * *"
             }
           ]
         }
       },
-      "id": "ef078e26-b8da-4ac8-85bf-226b25d8c253",
+      "id": "550e8400-e29b-41d4-a716-446655440001",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [
-        -4352,
-        -304
-      ]
+      "position": [240, 400]
     },
     {
       "parameters": {
-        "url": "https://discord.com/api/v10/guilds/YOUR_GUILD_ID/channels",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "method": "GET",
+        "url": "https://discord.com/api/v10/guilds/798572456201682994/channels",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": []
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot TVUJ_BOT_TOKEN"
+            }
+          ]
         },
         "options": {}
       },
-      "id": "71b2e9d0-fcc4-405e-b807-5b0e82ec5f6e",
+      "id": "550e8400-e29b-41d4-a716-446655440002",
       "name": "Nacti seznam kanalu",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        -4128,
-        -304
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
-          "name": "Discord Bot Token"
-        }
-      }
+      "position": [460, 400]
     },
     {
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\n// staticData.lastIds = {}; // RESET - smaž po prvním úspěšném testu\n\nif (!staticData.lastIds) staticData.lastIds = {};\n\nconst DISCORD_EPOCH = 1420070400000n;\nconst twelveHoursAgo = BigInt(Date.now() - 12 * 60 * 60 * 1000);\nconst defaultSnowflake = String((twelveHoursAgo - DISCORD_EPOCH) << 22n);\n\nconst SKIP_NAMES = [\n  'moderátoři', 'cbh-moderators', 'testovací-kanál', 'nastavení-botů',\n  'log-pristup', 'log-zprávy', 'log', 'fve-soukrome', 'stream-chat-uzavřeno-archivní',\n  'midjourney-bot', 'párty_21-05-29', 'bazar-old', 'pikle', 'ymovie-ascc',\n  'ebooks-for-vip', 'vlákna🧵📌', 'olé-dezolé', 'kanál-nsfw'\n];\n\nconst allItems = $input.all();\n\nconst textChannels = allItems\n  .map(item => item.json)\n  .filter(ch => (ch.type === 0 || ch.type === 5) && !ch.nsfw)\n  .filter(ch => !SKIP_NAMES.includes(ch.name))\n  .map(ch => ({\n    channelId: ch.id,\n    channelName: ch.name,\n    after: staticData.lastIds[ch.id] || defaultSnowflake\n  }));\n\nreturn textChannels.map(ch => ({ json: ch }));"
+        "jsCode": "const channels = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.lastIds) staticData.lastIds = {};\n\n// Discord epoch pro výpočet snowflake\nconst DISCORD_EPOCH = 1420070400000n;\nconst twelveHoursAgo = BigInt(Date.now() - 12 * 60 * 60 * 1000);\nconst defaultSnowflake = String((twelveHoursAgo - DISCORD_EPOCH) << 22n);\n\n// Přeskočit tyto kanály (soukromé, admin, archiv, log, nsfw)\nconst SKIP_NAMES = [\n  'moderátoři', 'cbh-moderators', 'testovací-kanál', 'nastavení-botů',\n  'log-pristup', 'log-zprávy', 'log', 'fve-soukrome', 'stream-chat-uzavřeno-archivní',\n  'midjourney-bot', 'párty_21-05-29', 'bazar-old', 'pikle', 'ymovie-ascc',\n  'ebooks-for-vip', 'vlákna🧵📌', 'olé-dezolé', 'kanál-nsfw'\n];\n\n// Typ 0 = textový kanál, typ 5 = announcement kanál\n// Přeskočit type 2 (hlas), 4 (kategorie), 13 (stage), 15 (forum)\nconst textChannels = channels\n  .filter(ch => (ch.type === 0 || ch.type === 5) && !ch.nsfw)\n  .filter(ch => !SKIP_NAMES.includes(ch.name))\n  .map(ch => ({\n    channelId: ch.id,\n    channelName: ch.name,\n    after: staticData.lastIds[ch.id] || defaultSnowflake\n  }));\n\nreturn textChannels.map(ch => ({ json: ch }));"
       },
-      "id": "ff3f5ce3-d32e-4f22-a057-43fa1d2c53df",
+      "id": "550e8400-e29b-41d4-a716-446655440003",
       "name": "Filtruj textove kanaly",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -3904,
-        -304
-      ]
+      "position": [680, 400]
     },
     {
       "parameters": {
+        "method": "GET",
         "url": "=https://discord.com/api/v10/channels/{{ $json.channelId }}/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -80,7 +68,12 @@
         },
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": []
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot TVUJ_BOT_TOKEN"
+            }
+          ]
         },
         "options": {
           "response": {
@@ -90,47 +83,32 @@
           }
         }
       },
-      "id": "164ab59a-b982-4888-8860-0c14e0c56ba7",
+      "id": "550e8400-e29b-41d4-a716-446655440004",
       "name": "Nacti zpravy kanalu",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        -3680,
-        -304
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
-          "name": "Header Auth account"
-        }
-      }
+      "position": [900, 400]
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const message = $json;\nconst channelId = $('Filtruj textove kanaly').item.json.channelId;\nconst channelName = $('Filtruj textove kanaly').item.json.channelName;\n\nif (!message || !message.id || message.author?.bot) {\n  return { json: { channelId, channelName, text: '', hasMessages: false, lastId: message?.id || null } };\n}\n\nconst time = new Date(message.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });\n\nlet parts = [];\nif (message.content && message.content.trim().length > 0) {\n  parts.push(message.content.trim());\n}\nif (message.attachments && message.attachments.length > 0) {\n  message.attachments.forEach(a => parts.push(`[příloha: ${a.filename || a.url}]`));\n}\nif (message.embeds && message.embeds.length > 0) {\n  message.embeds.forEach(e => {\n    const desc = e.title || e.description || e.url || 'embed';\n    parts.push(`[embed: ${desc.substring(0, 100)}]`);\n  });\n}\n\nif (parts.length === 0) {\n  return { json: { channelId, channelName, text: '', hasMessages: false, lastId: message.id } };\n}\n\nconst text = `[${time}] ${message.author.username}: ${parts.join(' | ')}`;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.lastIds) staticData.lastIds = {};\nif (message.id) staticData.lastIds[channelId] = message.id;\n\nreturn { json: { channelId, channelName, text, hasMessages: true, lastId: message.id } };"
+        "jsCode": "const response = $json;\nconst channelId = $('Filtruj textove kanaly').item.json.channelId;\nconst channelName = $('Filtruj textove kanaly').item.json.channelName;\n\n// Pokud API vrátilo chybu (403 = nemáme přístup), přeskoč\nif (!Array.isArray(response)) {\n  return { json: { channelId, channelName, text: '', hasMessages: false, lastId: null } };\n}\n\nconst messages = response;\nif (messages.length === 0) {\n  return { json: { channelId, channelName, text: '', hasMessages: false, lastId: null } };\n}\n\n// Seřaď chronologicky\nconst sorted = [...messages].sort((a, b) => {\n  const aId = BigInt(a.id);\n  const bId = BigInt(b.id);\n  return aId < bId ? -1 : aId > bId ? 1 : 0;\n});\n\nconst lastId = sorted[sorted.length - 1].id;\n\n// Filtruj boty a prázdné zprávy\nconst text = sorted\n  .filter(m => !m.author?.bot && m.content && m.content.trim().length > 0)\n  .map(m => {\n    const time = new Date(m.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });\n    return `[${time}] ${m.author.username}: ${m.content.trim()}`;\n  })\n  .join('\\n');\n\n// Ulož poslední ID\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.lastIds) staticData.lastIds = {};\nif (lastId) staticData.lastIds[channelId] = lastId;\n\nreturn { json: { channelId, channelName, text, hasMessages: text.length > 0, lastId } };"
       },
-      "id": "56e13871-148d-4046-a4a6-1a6faa2f01b9",
+      "id": "550e8400-e29b-41d4-a716-446655440005",
       "name": "Zpracuj zpravy",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -3456,
-        -304
-      ]
+      "position": [1120, 400]
     },
     {
       "parameters": {
         "jsCode": "const items = $input.all();\nconst hasAny = items.some(i => i.json.hasMessages);\n\nif (!hasAny) {\n  return [{ json: { hasMessages: false, combined: '', timestamp: '' } }];\n}\n\nconst parts = items\n  .filter(i => i.json.hasMessages)\n  .map(i => `## #${i.json.channelName}\\n${i.json.text}`);\n\n// Limit 20k znaků kvůli nákladům na API\nconst combined = parts.join('\\n\\n---\\n\\n').substring(0, 20000);\nconst now = new Date().toLocaleString('cs-CZ', { timeZone: 'Europe/Prague' });\nconst channelCount = items.filter(i => i.json.hasMessages).length;\n\nreturn [{ json: { hasMessages: true, combined, timestamp: now, channelCount } }];"
       },
-      "id": "dc409b33-0895-4b07-944a-42b948be7707",
+      "id": "550e8400-e29b-41d4-a716-446655440006",
       "name": "Agreguj",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -3232,
-        -304
-      ]
+      "position": [1340, 400]
     },
     {
       "parameters": {
@@ -138,8 +116,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
+            "typeValidation": "strict"
           },
           "conditions": [
             {
@@ -156,24 +133,23 @@
         },
         "options": {}
       },
-      "id": "3fda0a14-8495-437b-9630-780c7596659d",
+      "id": "550e8400-e29b-41d4-a716-446655440007",
       "name": "Jsou zpravy?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        -3008,
-        -304
-      ]
+      "position": [1560, 400]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "TVUJ_ANTHROPIC_API_KEY"
+            },
             {
               "name": "anthropic-version",
               "value": "2023-06-01"
@@ -183,65 +159,52 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, messages: [{ role: 'user', content: 'Jsi asistent který vytváří přehledná shrnutí Discord konverzací v češtině.\\n\\nPro každý kanál kde se něco dělo napiš shrnutí:\\n- Kdo co napsal a jak na to ostatní reagovali (zmiňuj konkrétní uživatelská jména)\\n- Kdo vznesl otázku a kdo odpověděl (nebo zda zůstala bez odpovědi)\\n- Zajímavé názorové střety nebo vtipné momenty\\n- Co zůstalo nevyřešeno\\n\\nBuď konkrétní a podrobný. Kanály kde se nic zajímavého nestalo vynech.\\n\\nZprávy (' + $json.timestamp + ', ' + $json.channelCount + ' aktivních kanálů):\\n\\n' + $json.combined }] }) }}",
+        "body": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages: [{ role: 'user', content: 'Jsi asistent který vytváří přehledná shrnutí Discord konverzací v češtině.\\n\\nShrň tyto zprávy z Discord serveru IoT CZ stručně a přehledně. Pro každý kanál kde se něco dělo uveď krátký souhrn. Zdůrazni: 1) Zajímavé technické diskuze, 2) Otázky které zůstaly nezodpovězeny, 3) Sdílené zajímavé projekty nebo novinky. Pokud se v nějakém kanálu nic zajímavého nestalo, ten kanál vynech.\\n\\nZprávy (' + $json.timestamp + ', ' + $json.channelCount + ' aktivních kanálů):\\n\\n' + $json.combined }] }) }}",
         "options": {}
       },
-      "id": "fad43d38-f946-41be-883c-62b5a484b62a",
+      "id": "550e8400-e29b-41d4-a716-446655440008",
       "name": "Anthropic - Shrnuti",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        -2784,
-        -304
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
-          "name": "Anthropic API Key"
-        }
-      }
+      "position": [1780, 300]
     },
     {
       "parameters": {
         "jsCode": "const content = $json.content || [];\nconst summaryText = content.find(c => c.type === 'text')?.text || 'Nepodařilo se vygenerovat shrnutí.';\nconst timestamp = $('Agreguj').first().json.timestamp;\nconst channelCount = $('Agreguj').first().json.channelCount;\n\nconst slackText = `*🤖 IoT CZ Discord Shrnutí — ${timestamp}*\\n_Aktivní kanály: ${channelCount}_\\n\\n${summaryText}`;\nconst discordText = `**🤖 IoT CZ Discord Shrnutí — ${timestamp}**\\n_Aktivní kanály: ${channelCount}_\\n\\n${summaryText}`.substring(0, 1990);\n\nreturn [{ json: { summaryText, slackText, discordText, timestamp } }];"
       },
-      "id": "2a9e21d4-c173-40d4-b3fd-1e25940a150a",
+      "id": "550e8400-e29b-41d4-a716-446655440009",
       "name": "Formatuj vystup",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -2560,
-        -304
-      ]
+      "position": [2000, 300]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "YOUR_SLACK_WEBHOOK_URL",
+        "url": "TVUJ_SLACK_WEBHOOK_URL",
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
         "body": "={{ JSON.stringify({ text: $json.slackText }) }}",
         "options": {}
       },
-      "id": "baa74ea8-a550-4749-bd7d-bb828e425f34",
+      "id": "550e8400-e29b-41d4-a716-446655440010",
       "name": "Slack - Odesli",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        -2336,
-        -400
-      ]
+      "position": [2220, 180]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://discord.com/api/v10/users/@me/channels",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot TVUJ_BOT_TOKEN"
+            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -251,33 +214,26 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ recipient_id: $json.userId }) }}",
+        "body": "{ \"recipient_id\": \"467361632775962647\" }",
         "options": {}
       },
-      "id": "262f7bf4-ed0a-4352-8b76-e0874f3379ad",
+      "id": "550e8400-e29b-41d4-a716-446655440011",
       "name": "Discord - Otevri DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        -2112,
-        -208
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
-          "name": "Discord Bot Token"
-        }
-      }
+      "position": [2220, 420]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://discord.com/api/v10/channels/{{ $json.id }}/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot TVUJ_BOT_TOKEN"
+            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -285,183 +241,58 @@
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "content",
-              "value": "=={{ $('Formatuj vystup').first().json.discordText }}"
-            }
-          ]
-        },
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ content: $('Formatuj vystup').first().json.discordText }) }}",
         "options": {}
       },
-      "id": "14c28d56-e878-4f7e-8b5d-97e37665cc6c",
+      "id": "550e8400-e29b-41d4-a716-446655440012",
       "name": "Discord - Posli DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        -1888,
-        -208
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
-          "name": "Discord Bot Token"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// ===== ZDE PŘIDEJ USER ID PŘÍJEMCŮ =====\nconst recipients = [\n  'YOUR_DISCORD_USER_ID',  // Lukáš (ty)\n  'FRIEND_DISCORD_USER_ID_2',  // Dumpl3xx\n  'FRIEND_DISCORD_USER_ID_3',  // Sperhak\n];\n// =======================================\n\nconst discordText = $input.first().json.discordText;\n\nreturn recipients.map(userId => ({\n  json: { userId, discordText }\n}));"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2336,
-        -208
-      ],
-      "id": "0ea2b364-3d2e-4f92-aa10-eba46f35bb0c",
-      "name": "seznam prijemcu"
+      "position": [2440, 420]
     }
   ],
-  "pinData": {},
   "connections": {
     "Schedule Trigger": {
-      "main": [
-        [
-          {
-            "node": "Nacti seznam kanalu",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Nacti seznam kanalu", "type": "main", "index": 0}]]
     },
     "Nacti seznam kanalu": {
-      "main": [
-        [
-          {
-            "node": "Filtruj textove kanaly",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Filtruj textove kanaly", "type": "main", "index": 0}]]
     },
     "Filtruj textove kanaly": {
-      "main": [
-        [
-          {
-            "node": "Nacti zpravy kanalu",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Nacti zpravy kanalu", "type": "main", "index": 0}]]
     },
     "Nacti zpravy kanalu": {
-      "main": [
-        [
-          {
-            "node": "Zpracuj zpravy",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Zpracuj zpravy", "type": "main", "index": 0}]]
     },
     "Zpracuj zpravy": {
-      "main": [
-        [
-          {
-            "node": "Agreguj",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Agreguj", "type": "main", "index": 0}]]
     },
     "Agreguj": {
-      "main": [
-        [
-          {
-            "node": "Jsou zpravy?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Jsou zpravy?", "type": "main", "index": 0}]]
     },
     "Jsou zpravy?": {
       "main": [
-        [
-          {
-            "node": "Anthropic - Shrnuti",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Anthropic - Shrnuti", "type": "main", "index": 0}],
+        []
       ]
     },
     "Anthropic - Shrnuti": {
-      "main": [
-        [
-          {
-            "node": "Formatuj vystup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Formatuj vystup", "type": "main", "index": 0}]]
     },
     "Formatuj vystup": {
-      "main": [
-        [
-          {
-            "node": "Slack - Odesli",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "seznam prijemcu",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        {"node": "Slack - Odesli", "type": "main", "index": 0},
+        {"node": "Discord - Otevri DM", "type": "main", "index": 0}
+      ]]
     },
     "Discord - Otevri DM": {
-      "main": [
-        [
-          {
-            "node": "Discord - Posli DM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "seznam prijemcu": {
-      "main": [
-        [
-          {
-            "node": "Discord - Otevri DM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Discord - Posli DM", "type": "main", "index": 0}]]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "versionId": "ed197a3a-80c9-42e5-9a5d-4d79dfe3411a",
-  "meta": {
-    "instanceId": "e89830bcb005f1aa6a6398b995e62952245e991774793d0b54a6028f479073ce"
-  },
-  "id": "SnjrXSYakYAZe68V",
-  "tags": []
+    "executionOrder": "v1"
+  }
 }
